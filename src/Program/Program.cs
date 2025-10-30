@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using CompAndDel.Pipes;
 using CompAndDel.Filters;
 
@@ -9,14 +10,22 @@ namespace CompAndDel
         static void Main(string[] args)
         {
             PipeNull pipeNull = new PipeNull();
-            PipeSerial pipeSerial2 = new PipeSerial(new FilterNegative(), pipeNull);
-            PipeSerial pipeSerial1 = new PipeSerial(new FilterGreyscale(), pipeSerial2);
+
+            PipeSerial pipeTwitter = new PipeSerial(new FilterTwitter("Hay una cara en esta foto"), pipeNull);
+            
+            PipeSerial pipeNegative = new PipeSerial(new FilterNegative(), pipeNull);
+
+            FilterConditional conditionalFilter = new FilterConditional();
+            PipeConditionalFork pipeConditional = new PipeConditionalFork(conditionalFilter, pipeTwitter, pipeNegative);
+            
+            PipeSerial pipeGreyscale = new PipeSerial(new FilterGreyscale(), pipeConditional);
 
             PictureProvider provider = new PictureProvider();
             IPicture picture = provider.GetPicture(@"luke.jpg");
 
-            IPicture result = pipeSerial1.Send(picture);
-            provider.SavePicture(result, @"luke1.jpg");
+            IPicture result = pipeGreyscale.Send(picture);
+            provider.SavePicture(result, @"luke-final.jpg");
+            Console.WriteLine(conditionalFilter.HasFace);
         }
     }
 }
